@@ -1,16 +1,19 @@
 # Короткое введение в Java + Maven
 
+Ссылка на задание: https://github.com/MatorinFedor/maven-demo
+
 ## 1) Что потребуется
-* Среда разработки (рекомендуется [IntelliJ IDEA](https://www.jetbrains.com/idea/download/?section=windows))
-* JDK версии 21 или выше (среда разработки установит сама)
-* Maven
+
+- Среда разработки (рекомендуется [IntelliJ IDEA](https://www.jetbrains.com/idea/download/?section=windows))
+- JDK версии 21 или выше (среда разработки установит сама)
+- Maven
 
 ## 2) Создаём простой проект в IDE и компилируем его в консоли
 
 **Шаг 0. Готовим окружение и `PATH`**  
 Задача — чтобы `java`, `javac` и `mvn` были доступны в любой консоли.
 
-* **Проверяем доступность инструментов:**
+- **Проверяем доступность инструментов:**
 
   ```bash
   java --version
@@ -31,60 +34,60 @@ C:\Users\<user>\.jdks\\<ваша версия JDK>\bin
 IDE создаст минимальную структуру с папкой `src`.
 Код:
 
-  ```java
-  package com.example;
+```java
+package com.example;
 
-  public class Hello {
-      public static void main(String[] args) {
-          System.out.println("Hello from IDE!");
-      }
-  }
-  ```
+public class Hello {
+    public static void main(String[] args) {
+        System.out.println("Hello from IDE!");
+    }
+}
+```
 
 **Шаг 2. Запускаем тот же код из консоли (ручная компиляция)**
 
 1. **Откройте терминал в корне проекта** `hello` (где лежит папка `src`).
 
-    * В IntelliJ: на снизу на левой панели значок терминала.
-    * Либо откройте системный терминал в корневой папке проекта.
+   - В IntelliJ: на снизу на левой панели значок терминала.
+   - Либо откройте системный терминал в корневой папке проекта.
 
 2. **Создаём папку для скомпилированных классов** (выходной каталог):
 
-    * Windows (PowerShell/CMD):
+   - Windows (PowerShell/CMD):
 
-      ```powershell
-      mkdir out
-      ```
+     ```powershell
+     mkdir out
+     ```
 
 3. **Компилируем исходник в байткод (`.class`)**:
 
-    * Windows:
+   - Windows:
 
-      ```powershell
-      javac -d out src\Hello.java
-      ```
+     ```powershell
+     javac -d out src\Hello.java
+     ```
 
    Что здесь происходит:
 
-    * `javac` — компилятор Java.
-    * `-d out` — сложить все скомпилированные `.class` в папку `out`, сохраняя структуру пакетов.
+   - `javac` — компилятор Java.
+   - `-d out` — сложить все скомпилированные `.class` в папку `out`, сохраняя структуру пакетов.
 
 4. **Смотрим, что получилось**:
 
-    В `out` появилcя файл `out/Hello.class`.  
+   В `out` появилcя файл `out/Hello.class`.
 
 5. **Запускаем JVM на скомпилированных классах**:
 
-    * macOS/Linux/Windows:
-      ```bash
-      java -cp out Hello
-      ```
+   - macOS/Linux/Windows:
+     ```bash
+     java -cp out Hello
+     ```
 
    Пояснения:
 
-    * `java` — запуск байткода на JVM.
-    * `-cp out` — `classpath`, где искать классы (наша папка `out`). -cp (или -classpath) говорит JVM/javac, где искать ваши классы.
-    * `Hello` — **полное имя класса**, а не путь к файлу.
+   - `java` — запуск байткода на JVM.
+   - `-cp out` — `classpath`, где искать классы (наша папка `out`). -cp (или -classpath) говорит JVM/javac, где искать ваши классы.
+   - `Hello` — **полное имя класса**, а не путь к файлу.
 
 **Шаг 3. Собираем исполняемый JAR**
 
@@ -96,15 +99,16 @@ IDE создаст минимальную структуру с папкой `sr
 
    Что делает команда:
 
-    * `jar --create --file out/hello.jar` — создаёт архив JAR.
-    * `--main-class Hello` — прописывает в манифест главный класс.
-    * `-C out .` — взять все классы из каталога `out`.
+   - `jar --create --file out/hello.jar` — создаёт архив JAR.
+   - `--main-class Hello` — прописывает в манифест главный класс.
+   - `-C out .` — взять все классы из каталога `out`.
 
 2. Запуск:
 
    ```bash
    java -jar out/hello.jar
    ```
+
 ---
 
 ## 3) Maven
@@ -116,13 +120,13 @@ IDE создаст минимальную структуру с папкой `sr
 
 ### 3.2 Ключевые **фазы** стандартного жизненного цикла
 
-* `validate` — проверка корректности структуры проекта;
-* `compile` — компиляция `src/main/java`;
-* `test` — запуск юнит-тестов (`src/test/java`);
-* `package` — упаковка артефакта (обычно JAR в `target/`);
-* `verify` — доп. проверки качества (если настроены плагины);
-* `install` — установка артефакта в локальный репозиторий `~/.m2`;
-* `deploy` — публикация в удалённый репозиторий (CI/CD).
+- `validate` — проверка корректности структуры проекта;
+- `compile` — компиляция `src/main/java`;
+- `test` — запуск юнит-тестов (`src/test/java`);
+- `package` — упаковка артефакта (обычно JAR в `target/`);
+- `verify` — доп. проверки качества (если настроены плагины);
+- `install` — установка артефакта в локальный репозиторий `~/.m2`;
+- `deploy` — публикация в удалённый репозиторий (CI/CD).
 
 Ещё есть отдельный цикл `clean` (удаляет `target/`) и `site` (генерация сайта/отчётов).
 
@@ -171,11 +175,11 @@ mvn exec:java
 
 > Maven скомпилирует проект и запустит `main` без указания classpath.
 
-
 # Задание 1
-* Создать Java проект с фреймворком Spring Boot версии 3.5.5 или выше;
-* Опубликовать его на Github;
-* Создать простые контроллеры, чтобы посмотреть, как с ними можно работать.
+
+- Создать Java проект с фреймворком Spring Boot версии 3.5.5 или выше;
+- Опубликовать его на Github;
+- Создать простые контроллеры, чтобы посмотреть, как с ними можно работать.
 
 Инструмент для автоматического создания проекта на Spring Boot: [Spring Initializer](https://start.spring.io/)  
 [Дополнительный обучающие материалы](https://spring.io/)
@@ -217,6 +221,68 @@ mvn -q -DskipTests=false test
 ```
 
 # Задание 2
-* Выбрать тему из предложенных в [файле](./files/Варианты_РБПО_2025.xlsx) (либо предложить свою);
-* Для каждой сущности реализовать методы контроллера для: Создания, Получения, Удаления и Изменения;
-* Продумать, какие функции в дальнейшем будет предоставлять ваш сервис.
+
+Ветка: Laba_2
+
+- Выбрать тему из предложенных в [файле](./files/Варианты_РБПО_2025.xlsx) (либо предложить свою);
+- Для каждой сущности реализовать методы контроллера для: Создания, Получения, Удаления и Изменения;
+- Продумать, какие функции в дальнейшем будет предоставлять ваш сервис.
+
+## Выполнение задания 2 (тема: каршеринг)
+
+Сущности: `Car`, `User`, `Ride`, `Payment`.
+
+Эндпоинты (CRUD):
+
+- Cars: `GET/POST /api/cars`, `GET/PUT/DELETE /api/cars/{id}`
+- Users: `GET/POST /api/users`, `GET/PUT/DELETE /api/users/{id}`
+- Rides: `GET/POST /api/rides`, `GET/PUT/DELETE /api/rides/{id}`
+- Payments: `GET/POST /api/payments`, `GET/PUT/DELETE /api/payments/{id}`
+
+Доп. функция сервиса: завершение поездки с автоматическим расчётом платежа
+
+- Finish ride: `POST /api/rides/{id}/finish?distanceKm=12.3` → возвращает `{ ride, payment }`.
+
+Тесты:
+
+- Создать пользователя:
+  `curl -sX POST http://localhost:8080/api/users -H 'Content-Type: application/json' -d '{"name":"Ivan","email":"ivan@example.com","drivingLicense":"LIC123"}'`
+
+- Создать второго пользователя:
+  `curl -sX POST http://localhost:8080/api/users -H 'Content-Type: application/json' -d '{"name":"Olga","email":"olga@example.com","drivingLicense":"LIC456"}'`
+
+- Создать третьего пользователя:
+  `curl -sX POST http://localhost:8080/api/users -H 'Content-Type: application/json' -d '{"name":"Petr","email":"petr@example.com","drivingLicense":"LIC789"}'`
+
+- Создать автомобиль:
+  `curl -sX POST http://localhost:8080/api/cars -H 'Content-Type: application/json' -d '{"brand":"Kia","model":"Rio","licensePlate":"A123BC","available":true}'`
+
+- Создать второй автомобиль:
+  `curl -sX POST http://localhost:8080/api/cars -H 'Content-Type: application/json' -d '{"brand":"Hyundai","model":"Solaris","licensePlate":"B234CD","available":true}'`
+
+- Создать третий автомобиль:
+  `curl -sX POST http://localhost:8080/api/cars -H 'Content-Type: application/json' -d '{"brand":"VW","model":"Polo","licensePlate":"C345DE","available":true}'`
+
+- Посмотреть всех пользователей:
+  `curl -s http://localhost:8080/api/users | jq`
+
+- Посмотреть все машины:
+  `curl -s http://localhost:8080/api/cars | jq`
+
+- Начать поездку (пример с userId=1 и carId=1):
+  `curl -sX POST http://localhost:8080/api/rides -H 'Content-Type: application/json' -d '{"userId":1, "carId":1}' | jq`
+
+- Завершить поездку с расстоянием 10.5 км:
+  `curl -sX POST 'http://localhost:8080/api/rides/1/finish?distanceKm=10.5' | jq`
+
+- Проверить список поездок:
+  `curl -s http://localhost:8080/api/rides | jq`
+
+- Проверить платежи:
+  `curl -s http://localhost:8080/api/payments | jq`
+
+- Удалить пользователя (пример id=3):
+  `curl -sX DELETE http://localhost:8080/api/users/3`
+
+- Удалить машину (пример id=2):
+  `curl -sX DELETE http://localhost:8080/api/cars/2`
