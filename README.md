@@ -1,288 +1,99 @@
-# Короткое введение в Java + Maven
+# Сервис авиаперевозок
 
-Ссылка на задание: https://github.com/MatorinFedor/maven-demo
+Сущности: `Flight`, `Aircraft`, `Airport`, `Booking`, `Passenger`.
 
-## 1) Что потребуется
-
-- Среда разработки (рекомендуется [IntelliJ IDEA](https://www.jetbrains.com/idea/download/?section=windows))
-- JDK версии 21 или выше (среда разработки установит сама)
-- Maven
-
-## 2) Создаём простой проект в IDE и компилируем его в консоли
-
-**Шаг 0. Готовим окружение и `PATH`**  
-Задача — чтобы `java`, `javac` и `mvn` были доступны в любой консоли.
-
-- **Проверяем доступность инструментов:**
-
-  ```bash
-  java --version
-  javac --version
-  mvn -v
-  ```
-
-Если команды не находятся — нужно добавить в `PATH` путь к папке bin.
-
-Примерный путь к Maven:  
-C:\Program Files\JetBrains\\<ваша версия IDE>\plugins\maven\lib\maven3\bin
-
-Примерный путь к JDK:  
-C:\Users\<user>\.jdks\\<ваша версия JDK>\bin
-
-**Шаг 1. Создаём простой Java-проект в IntelliJ IDEA (без Maven)**
-
-IDE создаст минимальную структуру с папкой `src`.
-Код:
-
-```java
-package com.example;
-
-public class Hello {
-    public static void main(String[] args) {
-        System.out.println("Hello from IDE!");
-    }
-}
-```
-
-**Шаг 2. Запускаем тот же код из консоли (ручная компиляция)**
-
-1. **Откройте терминал в корне проекта** `hello` (где лежит папка `src`).
-
-   - В IntelliJ: на снизу на левой панели значок терминала.
-   - Либо откройте системный терминал в корневой папке проекта.
-
-2. **Создаём папку для скомпилированных классов** (выходной каталог):
-
-   - Windows (PowerShell/CMD):
-
-     ```powershell
-     mkdir out
-     ```
-
-3. **Компилируем исходник в байткод (`.class`)**:
-
-   - Windows:
-
-     ```powershell
-     javac -d out src\Hello.java
-     ```
-
-   Что здесь происходит:
-
-   - `javac` — компилятор Java.
-   - `-d out` — сложить все скомпилированные `.class` в папку `out`, сохраняя структуру пакетов.
-
-4. **Смотрим, что получилось**:
-
-   В `out` появилcя файл `out/Hello.class`.
-
-5. **Запускаем JVM на скомпилированных классах**:
-
-   - macOS/Linux/Windows:
-     ```bash
-     java -cp out Hello
-     ```
-
-   Пояснения:
-
-   - `java` — запуск байткода на JVM.
-   - `-cp out` — `classpath`, где искать классы (наша папка `out`). -cp (или -classpath) говорит JVM/javac, где искать ваши классы.
-   - `Hello` — **полное имя класса**, а не путь к файлу.
-
-**Шаг 3. Собираем исполняемый JAR**
-
-1. Находясь в корне проекта:
-
-   ```bash
-   jar --create --file out/hello.jar --main-class Hello -C out .
-   ```
-
-   Что делает команда:
-
-   - `jar --create --file out/hello.jar` — создаёт архив JAR.
-   - `--main-class Hello` — прописывает в манифест главный класс.
-   - `-C out .` — взять все классы из каталога `out`.
-
-2. Запуск:
-
-   ```bash
-   java -jar out/hello.jar
-   ```
-
----
-
-## 3) Maven
-
-### 3.1 Создаём новый Maven-проект с «Hello» в IntelliJ IDEA (или используйте этот)
-
-1. **File → New Project → Maven** (можно выбрать archetype `maven-archetype-quickstart`).
-2. **SDK:** JDK 21, **GroupId:** `com.example`, **ArtifactId:** `hello-mvn`.
-
-### 3.2 Ключевые **фазы** стандартного жизненного цикла
-
-- `validate` — проверка корректности структуры проекта;
-- `compile` — компиляция `src/main/java`;
-- `test` — запуск юнит-тестов (`src/test/java`);
-- `package` — упаковка артефакта (обычно JAR в `target/`);
-- `verify` — доп. проверки качества (если настроены плагины);
-- `install` — установка артефакта в локальный репозиторий `~/.m2`;
-- `deploy` — публикация в удалённый репозиторий (CI/CD).
-
-Ещё есть отдельный цикл `clean` (удаляет `target/`) и `site` (генерация сайта/отчётов).
-
-### 3.3 Собираем JAR и запускаем проект из консоли
-
-Собираем:
+## Как запустить / остановить
 
 ```bash
-mvn clean package
-```
-
-Запускаем байткод классом (в quickstart-JAR нет `Main-Class` в манифесте):
-
-```bash
-java -cp target/hello-mvn-1.0-SNAPSHOT.jar ru.mfa.App
-```
-
-### 3.4 Добавляем `exec-maven-plugin` и запускаем
-
-Чтобы не возиться с `-cp` и манифестами, нужно добавить в конец pox.xml плагин, упрощающий запуск:
-
-```xml
-<build>
-  <plugins>
-    <plugin>
-      <groupId>org.codehaus.mojo</groupId>
-      <artifactId>exec-maven-plugin</artifactId>
-      <version>3.2.0</version>
-      <configuration>
-        <mainClass>ru.mfa.App</mainClass>
-      </configuration>
-    </plugin>
-  </plugins>
-</build>
-```
-
-Запуск:
-
-```bash
-mvn clean compile exec:java
-# или
-mvn clean package exec:java
-# или после первых двух
-mvn exec:java
-```
-
-> Maven скомпилирует проект и запустит `main` без указания classpath.
-
-# Задание 1
-
-- Создать Java проект с фреймворком Spring Boot версии 3.5.5 или выше;
-- Опубликовать его на Github;
-- Создать простые контроллеры, чтобы посмотреть, как с ними можно работать.
-
-Инструмент для автоматического создания проекта на Spring Boot: [Spring Initializer](https://start.spring.io/)  
-[Дополнительный обучающие материалы](https://spring.io/)
-
-## Выполнение задания 1 (готово)
-
-- Версия Spring Boot: 3.5.6 (>= 3.5.5)
-- Сборщик: Maven
-- Стартовый модуль: `ru.mfa.MavenDemoApplication`
-- Контроллеры: `GET /api/hello`, `GET /api/greet/{name}`, `GET /api/ping`
-
-### Как запустить (вариант 1 — из Maven)
-
-```bash
-cd Lab/maven-demo
 mvn spring-boot:run
+pkill -f "spring-boot:run"
 ```
 
-Примеры запросов:
+## Тестирование API
+
+### Создание аэропортов
 
 ```bash
-curl http://localhost:8080/api/hello
-curl http://localhost:8080/api/greet/Student
-curl http://localhost:8080/api/ping
+curl -sX POST http://localhost:8080/api/airports -H 'Content-Type: application/json' -d '{"code":"SVO","name":"Sheremetyevo","city":"Moscow","country":"Russia"}'
+curl -sX POST http://localhost:8080/api/airports -H 'Content-Type: application/json' -d '{"code":"LED","name":"Pulkovo","city":"Saint Petersburg","country":"Russia"}'
+curl -sX POST http://localhost:8080/api/airports -H 'Content-Type: application/json' -d '{"code":"KZN","name":"Kazan","city":"Kazan","country":"Russia"}'
 ```
 
-### Сборка JAR и запустить
+### Создание самолетов
 
 ```bash
-cd Lab/maven-demo
-mvn clean package
-java -jar target/maven-demo-0.0.1-SNAPSHOT.jar
+curl -sX POST http://localhost:8080/api/aircrafts -H 'Content-Type: application/json' -d '{"model":"Boeing 737","manufacturer":"Boeing","registrationNumber":"RA-73001","capacity":2,"available":true}'
+curl -sX POST http://localhost:8080/api/aircrafts -H 'Content-Type: application/json' -d '{"model":"Airbus A320","manufacturer":"Airbus","registrationNumber":"RA-32001","capacity":160,"available":true}'
 ```
 
-### Тесты
+### Создание пассажиров
 
 ```bash
-mvn -q -DskipTests=false test
+curl -sX POST http://localhost:8080/api/passengers -H 'Content-Type: application/json' -d '{"firstName":"Иван","lastName":"Петров","email":"ivan.petrov@mail.ru","passportNumber":"1234 567890","phoneNumber":"+7-900-123-45-67"}'
+curl -sX POST http://localhost:8080/api/passengers -H 'Content-Type: application/json' -d '{"firstName":"Мария","lastName":"Сидорова","email":"maria.sidorova@gmail.com","passportNumber":"2345 678901","phoneNumber":"+7-916-234-56-78"}'
+curl -sX POST http://localhost:8080/api/passengers -H 'Content-Type: application/json' -d '{"firstName":"Алексей","lastName":"Иванов","email":"alex.ivanov@mail.ru","passportNumber":"3456 789012","phoneNumber":"+7-905-987-65-43"}'
 ```
 
-# Задание 2
+### Создание рейса
 
-Ветка: Laba_2
+```bash
+curl -sX POST http://localhost:8080/api/flights -H 'Content-Type: application/json' -d '{"flightNumber":"SU1234","aircraftId":1,"departureAirportId":1,"arrivalAirportId":2,"departureTime":"2024-12-20T10:00:00+03:00","arrivalTime":"2024-12-20T12:30:00+03:00","status":"SCHEDULED"}'
+```
 
-- Выбрать тему из предложенных в [файле](./files/Варианты_РБПО_2025.xlsx) (либо предложить свою);
-- Для каждой сущности реализовать методы контроллера для: Создания, Получения, Удаления и Изменения;
-- Продумать, какие функции в дальнейшем будет предоставлять ваш сервис.
+### Просмотр всех данных
 
-## Выполнение задания 2 (тема: каршеринг)
+```bash
+curl -s http://localhost:8080/api/airports | jq
+curl -s http://localhost:8080/api/aircrafts | jq
+curl -s http://localhost:8080/api/passengers | jq
+curl -s http://localhost:8080/api/flights | jq
+curl -s http://localhost:8080/api/bookings | jq
+```
 
-Сущности: `Car`, `User`, `Ride`, `Payment`.
+### Бронирование билетов
 
-Эндпоинты (CRUD):
+```bash
+curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":1,"seatNumber":"1A","price":8500.00}' | jq
+curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":2,"seatNumber":"1B","price":8500.00}' | jq
+```
 
-- Cars: `GET/POST /api/cars`, `GET/PUT/DELETE /api/cars/{id}`
-- Users: `GET/POST /api/users`, `GET/PUT/DELETE /api/users/{id}`
-- Rides: `GET/POST /api/rides`, `GET/PUT/DELETE /api/rides/{id}`
-- Payments: `GET/POST /api/payments`, `GET/PUT/DELETE /api/payments/{id}`
+### Проверка ошибок
 
-Доп. функция сервиса: завершение поездки с автоматическим расчётом платежа
+```bash
+# Дубликат места
+curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":2,"seatNumber":"1A","price":8500.00}'
+# Превышение вместимости
+curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":3,"seatNumber":"1C","price":8500.00}'
+# Неверный формат номера места
+curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":1,"seatNumber":"INVALID","price":8500.00}'
+# Попытка бронирования отмененного рейса
+curl -sX POST http://localhost:8080/api/flights/1/cancel
+curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":3,"seatNumber":"2A","price":8500.00}'
+```
 
-- Finish ride: `POST /api/rides/{id}/finish?distanceKm=12.3` → возвращает `{ ride, payment }`.
+### Изменение статуса рейса
 
-Тесты:
+```bash
+curl -sX PUT 'http://localhost:8080/api/flights/1/status?status=BOARDING'
+curl -sX PUT 'http://localhost:8080/api/flights/1/status?status=DEPARTED'
+```
 
-- Создать пользователя:
-  `curl -sX POST http://localhost:8080/api/users -H 'Content-Type: application/json' -d '{"name":"Ivan","email":"ivan@example.com","drivingLicense":"LIC123"}'`
+### Отмена рейса с автоматической отменой бронирований
 
-- Создать второго пользователя:
-  `curl -sX POST http://localhost:8080/api/users -H 'Content-Type: application/json' -d '{"name":"Olga","email":"olga@example.com","drivingLicense":"LIC456"}'`
+```bash
+curl -sX POST http://localhost:8080/api/flights/1/cancel
+```
 
-- Создать третьего пользователя:
-  `curl -sX POST http://localhost:8080/api/users -H 'Content-Type: application/json' -d '{"name":"Petr","email":"petr@example.com","drivingLicense":"LIC789"}'`
+### Просмотр бронирований
 
-- Создать автомобиль:
-  `curl -sX POST http://localhost:8080/api/cars -H 'Content-Type: application/json' -d '{"brand":"Kia","model":"Rio","licensePlate":"A123BC","available":true}'`
+```bash
+curl -s http://localhost:8080/api/bookings | jq
+```
 
-- Создать второй автомобиль:
-  `curl -sX POST http://localhost:8080/api/cars -H 'Content-Type: application/json' -d '{"brand":"Hyundai","model":"Solaris","licensePlate":"B234CD","available":true}'`
+### Удаление записей
 
-- Создать третий автомобиль:
-  `curl -sX POST http://localhost:8080/api/cars -H 'Content-Type: application/json' -d '{"brand":"VW","model":"Polo","licensePlate":"C345DE","available":true}'`
-
-- Посмотреть всех пользователей:
-  `curl -s http://localhost:8080/api/users | jq`
-
-- Посмотреть все машины:
-  `curl -s http://localhost:8080/api/cars | jq`
-
-- Начать поездку (пример с userId=1 и carId=1):
-  `curl -sX POST http://localhost:8080/api/rides -H 'Content-Type: application/json' -d '{"userId":1, "carId":1}' | jq`
-
-- Завершить поездку с расстоянием 10.5 км:
-  `curl -sX POST 'http://localhost:8080/api/rides/1/finish?distanceKm=10.5' | jq`
-
-- Проверить список поездок:
-  `curl -s http://localhost:8080/api/rides | jq`
-
-- Проверить платежи:
-  `curl -s http://localhost:8080/api/payments | jq`
-
-- Удалить пользователя (пример id=3):
-  `curl -sX DELETE http://localhost:8080/api/users/3`
-
-- Удалить машину (пример id=2):
-  `curl -sX DELETE http://localhost:8080/api/cars/2`
+```bash
+curl -sX DELETE http://localhost:8080/api/passengers/3
+curl -sX DELETE http://localhost:8080/api/aircrafts/2
+curl -sX DELETE http://localhost:8080/api/airports/3
+```

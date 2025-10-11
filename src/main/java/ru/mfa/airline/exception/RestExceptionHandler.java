@@ -1,4 +1,4 @@
-package ru.mfa.carsharing.exception;
+package ru.mfa.airline.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +18,7 @@ public class RestExceptionHandler {
                 .body(Map.of(
                         "timestamp", OffsetDateTime.now().toString(),
                         "error", "Not Found",
-                        "message", ex.getMessage()
-                ));
+                        "message", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -27,8 +26,7 @@ public class RestExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of(
                 "timestamp", OffsetDateTime.now().toString(),
                 "error", "Validation error",
-                "message", ex.getMessage()
-        ));
+                "message", ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -36,8 +34,7 @@ public class RestExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of(
                 "timestamp", OffsetDateTime.now().toString(),
                 "error", "Bad Request",
-                "message", ex.getMessage()
-        ));
+                "message", ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
@@ -45,8 +42,6 @@ public class RestExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "timestamp", OffsetDateTime.now().toString(),
                 "error", "Server Error",
-                "message", ex.getMessage()
-        ));
+                "message", ex.getMessage()));
     }
 }
-
