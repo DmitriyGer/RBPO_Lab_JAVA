@@ -42,4 +42,9 @@ public class AirportController {
         airportService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/by-city")
+    public List<Airport> byCity(@RequestParam String city) {
+        return airportService.findByCity(city);
+    }
 }

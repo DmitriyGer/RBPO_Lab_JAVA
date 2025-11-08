@@ -1,51 +1,54 @@
 package ru.mfa.airline.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.mfa.airline.exception.NotFoundException;
 import ru.mfa.airline.model.Airport;
+import ru.mfa.airline.repository.AirportRepository;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class AirportService {
-    private final Map<Long, Airport> airports = new ConcurrentHashMap<>();
-    private final AtomicLong seq = new AtomicLong(0);
+
+    @Autowired
+    private AirportRepository airportRepository;
 
     public List<Airport> findAll() {
-        return new ArrayList<>(airports.values());
+        return airportRepository.findAll();
     }
 
     public Airport findById(Long id) {
-        Airport airport = airports.get(id);
-        if (airport == null)
-            throw new NotFoundException("Airport not found: " + id);
-        return airport;
+        return airportRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Airport not found: " + id));
     }
 
     public Airport create(Airport airport) {
-        Long id = seq.incrementAndGet();
-        airport.setId(id);
         if (airport.getCode() == null || airport.getCode().isBlank()) {
             throw new IllegalArgumentException("code is required");
         }
-        airports.put(id, airport);
-        return airport;
+        if (airportRepository.findByCode(airport.getCode()).isPresent()) {
+            throw new IllegalArgumentException("Airport with code already exists: " + airport.getCode());
+        }
+        return airportRepository.save(airport);
     }
 
     public Airport update(Long id, Airport updated) {
-        if (!airports.containsKey(id))
-            throw new NotFoundException("Airport not found: " + id);
+        findById(id);
         updated.setId(id);
-        airports.put(id, updated);
-        return updated;
+        return airportRepository.save(updated);
     }
 
     public void delete(Long id) {
-        if (airports.remove(id) == null)
-            throw new NotFoundException("Airport not found: " + id);
+        findById(id);
+        airportRepository.deleteById(id);
+    }
+
+    public List<Airport> findByCity(String city) {
+        return airportRepository.findByCity(city);
+    }
+
+    public List<Airport> findByCountry(String country) {
+        return airportRepository.findByCountry(country);
     }
 }

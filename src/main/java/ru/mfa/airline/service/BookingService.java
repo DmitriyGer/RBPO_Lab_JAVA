@@ -1,92 +1,73 @@
 package ru.mfa.airline.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.mfa.airline.exception.NotFoundException;
-import ru.mfa.airline.model.Aircraft;
 import ru.mfa.airline.model.Booking;
 import ru.mfa.airline.model.BookingStatus;
 import ru.mfa.airline.model.Flight;
 import ru.mfa.airline.model.FlightStatus;
+import ru.mfa.airline.model.Passenger;
+import ru.mfa.airline.repository.BookingRepository;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class BookingService {
-    private final Map<Long, Booking> bookings = new ConcurrentHashMap<>();
-    private final AtomicLong seq = new AtomicLong(0);
 
-    private final FlightService flightService;
-    private final PassengerService passengerService;
-    private final AircraftService aircraftService;
+    @Autowired
+    private BookingRepository bookingRepository;
 
-    public BookingService(FlightService flightService, PassengerService passengerService,
-            AircraftService aircraftService) {
-        this.flightService = flightService;
-        this.passengerService = passengerService;
-        this.aircraftService = aircraftService;
-    }
+    @Autowired
+    private FlightService flightService;
+
+    @Autowired
+    private PassengerService passengerService;
 
     public List<Booking> findAll() {
-        return new ArrayList<>(bookings.values());
+        return bookingRepository.findAll();
     }
 
     public Booking findById(Long id) {
-        Booking booking = bookings.get(id);
-        if (booking == null)
-            throw new NotFoundException("Booking not found: " + id);
-        return booking;
+        return bookingRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Booking not found: " + id));
     }
 
+    @Transactional
     public Booking create(Booking booking) {
-        if (booking.getFlightId() == null || booking.getPassengerId() == null) {
-            throw new IllegalArgumentException("flightId and passengerId are required");
+        if (booking.getFlight() == null || booking.getPassenger() == null) {
+            throw new IllegalArgumentException("flight and passenger are required");
         }
 
         if (booking.getSeatNumber() == null || booking.getSeatNumber().trim().isEmpty()) {
             throw new IllegalArgumentException("seatNumber is required");
         }
 
-        Flight flight = flightService.findById(booking.getFlightId());
+        Flight flight = flightService.findById(booking.getFlight().getId());
         if (flight.getStatus() == FlightStatus.CANCELLED || flight.getStatus() == FlightStatus.DEPARTED) {
             throw new IllegalArgumentException("Cannot book flight with status: " + flight.getStatus());
         }
 
-        passengerService.findById(booking.getPassengerId());
-        Aircraft aircraft = aircraftService.findById(flight.getAircraftId());
+        Passenger passenger = passengerService.findById(booking.getPassenger().getId());
 
-        // Проверка на дубликат места
-        boolean seatTaken = bookings.values().stream()
-                .anyMatch(b -> b.getFlightId().equals(booking.getFlightId())
-                        && b.getSeatNumber().equals(booking.getSeatNumber())
-                        && b.getStatus() == BookingStatus.CONFIRMED);
-
-        if (seatTaken) {
+        if (bookingRepository.findByFlightIdAndSeatNumber(flight.getId(), booking.getSeatNumber()).isPresent()) {
             throw new IllegalArgumentException("Seat " + booking.getSeatNumber() + " is already taken on this flight");
         }
 
-        // Проверка на превышение вместимости
-        long bookedSeats = bookings.values().stream()
-                .filter(b -> b.getFlightId().equals(booking.getFlightId()))
-                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
-                .count();
-
-        if (bookedSeats >= aircraft.getCapacity()) {
+        long bookedSeats = bookingRepository.countConfirmedBookingsByFlight(flight.getId());
+        if (bookedSeats >= flight.getAircraft().getCapacity()) {
             throw new IllegalArgumentException("Flight is fully booked");
         }
 
-        // Валидация номера места (простая проверка формата)
         if (!isValidSeatNumber(booking.getSeatNumber())) {
             throw new IllegalArgumentException("Invalid seat number format: " + booking.getSeatNumber());
         }
 
-        Long id = seq.incrementAndGet();
-        booking.setId(id);
+        booking.setFlight(flight);
+        booking.setPassenger(passenger);
         booking.setBookingTime(OffsetDateTime.now());
         booking.setStatus(BookingStatus.CONFIRMED);
 
@@ -94,48 +75,50 @@ public class BookingService {
             booking.setPrice(new BigDecimal("5000"));
         }
 
-        bookings.put(id, booking);
-        return booking;
+        return bookingRepository.save(booking);
     }
 
     private boolean isValidSeatNumber(String seatNumber) {
-        // Простая валидация: число + буква (например, 12A, 5F, 33C)
         return seatNumber.matches("\\d{1,2}[A-F]");
     }
 
     public Booking update(Long id, Booking updated) {
-        if (!bookings.containsKey(id))
-            throw new NotFoundException("Booking not found: " + id);
+        findById(id);
         updated.setId(id);
-        bookings.put(id, updated);
-        return updated;
+        return bookingRepository.save(updated);
     }
 
     public void delete(Long id) {
-        if (bookings.remove(id) == null)
-            throw new NotFoundException("Booking not found: " + id);
+        findById(id);
+        bookingRepository.deleteById(id);
     }
 
+    @Transactional
     public Booking cancel(Long id) {
         Booking booking = findById(id);
-        Flight flight = flightService.findById(booking.getFlightId());
 
-        if (flight.getStatus() == FlightStatus.DEPARTED) {
+        if (booking.getFlight().getStatus() == FlightStatus.DEPARTED) {
             throw new IllegalArgumentException("Cannot cancel booking for departed flight");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        bookings.put(id, booking);
-        return booking;
+        return bookingRepository.save(booking);
     }
 
+    @Transactional
     public void cancelAllBookingsForFlight(Long flightId) {
-        bookings.values().stream()
-                .filter(booking -> booking.getFlightId().equals(flightId))
-                .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
-                .forEach(booking -> {
-                    booking.setStatus(BookingStatus.CANCELLED);
-                    bookings.put(booking.getId(), booking);
-                });
+        List<Booking> bookings = bookingRepository.findByFlightAndStatus(flightId, BookingStatus.CONFIRMED);
+        bookings.forEach(booking -> {
+            booking.setStatus(BookingStatus.CANCELLED);
+            bookingRepository.save(booking);
+        });
+    }
+
+    public List<Booking> findByFlightId(Long flightId) {
+        return bookingRepository.findByFlightId(flightId);
+    }
+
+    public List<Booking> findByPassengerId(Long passengerId) {
+        return bookingRepository.findByPassengerId(passengerId);
     }
 }

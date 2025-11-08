@@ -1,0 +1,491 @@
+{
+	"info": {
+		"_postman_id": "d6954779-24e5-44f0-967e-a143116db974",
+		"name": "Laba_Airline",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49193097",
+		"_collection_link": "https://kid3590-2486011.postman.co/workspace/kid3590's-Workspace~ab13a158-5aae-41bf-8956-e283742741cf/collection/49193097-d6954779-24e5-44f0-967e-a143116db974?action=share&source=collection_link&creator=49193097"
+	},
+	"item": [
+		{
+			"name": "Посмотрим все самолеты",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/aircrafts",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"aircrafts"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Посмотрим конкретный самолет",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/aircrafts/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"aircrafts",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Создать новый самолет",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": \"Airbus A320\",\n    \"manufacturer\": \"Airbus\",\n    \"registrationNumber\": \"VP-NEW01\",\n    \"capacity\": 180,\n    \"available\": true\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/aircrafts",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"aircrafts"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Обновить самолет",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": \"Boeing 737-800 MAX\",\n    \"manufacturer\": \"Boeing\",\n    \"registrationNumber\": \"RA-73001\",\n    \"capacity\": 189,\n    \"available\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/aircrafts/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"aircrafts",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Смотрим все аэропорты",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "Создать новый аэропорт",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"code\": \"SVX\",\n    \"name\": \"Koltsovo International Airport\",\n    \"city\": \"Yekaterinburg\",\n    \"country\": \"Russia\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/airports",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"airports"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Найти аэропорт по городу",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/airports/by-city?city=Moscow",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"airports",
+						"by-city"
+					],
+					"query": [
+						{
+							"key": "city",
+							"value": "Moscow"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Регистрируем нового пассажира",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"firstName\": \"Иван\",\n  \"lastName\": \"Петров\",\n  \"email\": \"ivan.petrov@email.com\",\n  \"phoneNumber\": \"+7-900-222-3344\",\n  \"passportNumber\": \"1234567891\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/passengers",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"passengers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Найдем пассажира по email",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/passengers/by-email?email=ivan@example.com",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"passengers",
+						"by-email"
+					],
+					"query": [
+						{
+							"key": "email",
+							"value": "ivan@example.com"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Создадим новый рейс",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"flightNumber\": \"SU150\",\n  \"aircraftId\": 1,\n  \"departureAirportId\": 1,\n  \"arrivalAirportId\": 2,\n  \"departureTime\": \"2024-02-15T10:30:00+03:00\",\n  \"arrivalTime\": \"2024-02-15T12:45:00+03:00\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/flights",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"flights"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Найдем рейсы между городами",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/flights/search?from=Saint Petersburg&to=Kazan&date=2025-11-10",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"flights",
+						"search"
+					],
+					"query": [
+						{
+							"key": "from",
+							"value": "Saint Petersburg"
+						},
+						{
+							"key": "to",
+							"value": "Kazan"
+						},
+						{
+							"key": "date",
+							"value": "2025-11-10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Создание бронирования",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"passengerId\": 4,\n    \"flightId\": 1,\n    \"seatNumber\": \"12D\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/bookings",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"bookings"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Смотрим бронирования пассажира",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/bookings/passenger/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"bookings",
+						"passenger",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Расчет выручки за рейс",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/airline/flights/1/revenue",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"airline",
+						"flights",
+						"1",
+						"revenue"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Статистика загруженности рейса",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/airline/flights/1/occupancy",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"airline",
+						"flights",
+						"1",
+						"occupancy"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Популярные направления",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/airline/popular-routes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"airline",
+						"popular-routes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Частые пассажиры",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/airline/frequent-passengers",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"airline",
+						"frequent-passengers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Рейсы на сегодня",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/airline/todays-flights",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"airline",
+						"todays-flights"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

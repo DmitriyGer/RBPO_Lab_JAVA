@@ -18,10 +18,14 @@ public class PassengerController {
     }
 
     @GetMapping
-    public List<Passenger> all() { return passengerService.findAll(); }
+    public List<Passenger> all() {
+        return passengerService.findAll();
+    }
 
     @GetMapping("/{id}")
-    public Passenger byId(@PathVariable Long id) { return passengerService.findById(id); }
+    public Passenger byId(@PathVariable Long id) {
+        return passengerService.findById(id);
+    }
 
     @PostMapping
     public ResponseEntity<Passenger> create(@RequestBody Passenger passenger) {
@@ -29,8 +33,8 @@ public class PassengerController {
     }
 
     @PutMapping("/{id}")
-    public Passenger update(@PathVariable Long id, @RequestBody Passenger passenger) { 
-        return passengerService.update(id, passenger); 
+    public Passenger update(@PathVariable Long id, @RequestBody Passenger passenger) {
+        return passengerService.update(id, passenger);
     }
 
     @DeleteMapping("/{id}")
@@ -39,4 +43,3 @@ public class PassengerController {
         return ResponseEntity.noContent().build();
     }
 }
-

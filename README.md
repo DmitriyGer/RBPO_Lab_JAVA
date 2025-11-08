@@ -1,99 +1,168 @@
-# Сервис авиаперевозок
+# Лаба №3
 
-Сущности: `Flight`, `Aircraft`, `Airport`, `Booking`, `Passenger`.
+Все запросы также продублированы в Postman в [JSON файле](./Postman/Laba_Airline.postman_collection.json)
 
-## Как запустить / остановить
+### Шаг 1.1: Посмотрим все самолеты
 
 ```bash
-mvn spring-boot:run
-pkill -f "spring-boot:run"
+curl -X GET http://localhost:8080/api/aircrafts
 ```
 
-## Тестирование API
-
-### Создание аэропортов
+### Шаг 1.2: Посмотрим конкретный самолет
 
 ```bash
-curl -sX POST http://localhost:8080/api/airports -H 'Content-Type: application/json' -d '{"code":"SVO","name":"Sheremetyevo","city":"Moscow","country":"Russia"}'
-curl -sX POST http://localhost:8080/api/airports -H 'Content-Type: application/json' -d '{"code":"LED","name":"Pulkovo","city":"Saint Petersburg","country":"Russia"}'
-curl -sX POST http://localhost:8080/api/airports -H 'Content-Type: application/json' -d '{"code":"KZN","name":"Kazan","city":"Kazan","country":"Russia"}'
+curl -X GET http://localhost:8080/api/aircrafts/1
 ```
 
-### Создание самолетов
+### Шаг 1.3: Создадим новый самолет
 
 ```bash
-curl -sX POST http://localhost:8080/api/aircrafts -H 'Content-Type: application/json' -d '{"model":"Boeing 737","manufacturer":"Boeing","registrationNumber":"RA-73001","capacity":2,"available":true}'
-curl -sX POST http://localhost:8080/api/aircrafts -H 'Content-Type: application/json' -d '{"model":"Airbus A320","manufacturer":"Airbus","registrationNumber":"RA-32001","capacity":160,"available":true}'
+curl -X POST http://localhost:8080/api/aircrafts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Airbus A320",
+    "manufacturer": "Airbus",
+    "registrationNumber": "VP-NEW01",
+    "capacity": 180,
+    "available": true
+  }'
 ```
 
-### Создание пассажиров
+### Шаг 1.4: Обновим самолет
 
 ```bash
-curl -sX POST http://localhost:8080/api/passengers -H 'Content-Type: application/json' -d '{"firstName":"Иван","lastName":"Петров","email":"ivan.petrov@mail.ru","passportNumber":"1234 567890","phoneNumber":"+7-900-123-45-67"}'
-curl -sX POST http://localhost:8080/api/passengers -H 'Content-Type: application/json' -d '{"firstName":"Мария","lastName":"Сидорова","email":"maria.sidorova@gmail.com","passportNumber":"2345 678901","phoneNumber":"+7-916-234-56-78"}'
-curl -sX POST http://localhost:8080/api/passengers -H 'Content-Type: application/json' -d '{"firstName":"Алексей","lastName":"Иванов","email":"alex.ivanov@mail.ru","passportNumber":"3456 789012","phoneNumber":"+7-905-987-65-43"}'
+curl -X PUT http://localhost:8080/api/aircrafts/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Boeing 737-800 MAX",
+    "manufacturer": "Boeing",
+    "registrationNumber": "RA-73001",
+    "capacity": 189,
+    "available": true
+  }'
 ```
 
-### Создание рейса
+## Сценарий 2: Работа с аэропортами (Airport)
+
+### Шаг 2.1: Смотрим все аэропорты
 
 ```bash
-curl -sX POST http://localhost:8080/api/flights -H 'Content-Type: application/json' -d '{"flightNumber":"SU1234","aircraftId":1,"departureAirportId":1,"arrivalAirportId":2,"departureTime":"2024-12-20T10:00:00+03:00","arrivalTime":"2024-12-20T12:30:00+03:00","status":"SCHEDULED"}'
+curl -X GET http://localhost:8080/api/airports
 ```
 
-### Просмотр всех данных
+### Шаг 2.2: Создаем новый аэропорт
 
 ```bash
-curl -s http://localhost:8080/api/airports | jq
-curl -s http://localhost:8080/api/aircrafts | jq
-curl -s http://localhost:8080/api/passengers | jq
-curl -s http://localhost:8080/api/flights | jq
-curl -s http://localhost:8080/api/bookings | jq
+curl -X POST http://localhost:8080/api/airports \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "LED",
+    "name": "Пулково",
+    "city": "Санкт-Петербург",
+    "country": "Россия"
+  }'
 ```
 
-### Бронирование билетов
+### Шаг 2.3: Найдем аэропорты по городу
 
 ```bash
-curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":1,"seatNumber":"1A","price":8500.00}' | jq
-curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":2,"seatNumber":"1B","price":8500.00}' | jq
+curl -X GET "http://localhost:8080/api/airports/by-city?city=Москва"
 ```
 
-### Проверка ошибок
+## Сценарий 3: Управление пассажирами (Passenger)
+
+### Шаг 3.1: Регистрируем нового пассажира
 
 ```bash
-# Дубликат места
-curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":2,"seatNumber":"1A","price":8500.00}'
-# Превышение вместимости
-curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":3,"seatNumber":"1C","price":8500.00}'
-# Неверный формат номера места
-curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":1,"seatNumber":"INVALID","price":8500.00}'
-# Попытка бронирования отмененного рейса
-curl -sX POST http://localhost:8080/api/flights/1/cancel
-curl -sX POST http://localhost:8080/api/bookings -H 'Content-Type: application/json' -d '{"flightId":1,"passengerId":3,"seatNumber":"2A","price":8500.00}'
+curl -X POST http://localhost:8080/api/passengers \
+  -H "Content-Type: application/json" \
+  -d '{
+  "firstName": "Иван",
+  "lastName": "Петров",
+  "email": "ivan.petrov@email.com",
+  "phoneNumber": "+7-900-222-3344",
+  "passportNumber": "1234567891"
+}'
 ```
 
-### Изменение статуса рейса
+### Шаг 3.2: Найдем пассажира по email
 
 ```bash
-curl -sX PUT 'http://localhost:8080/api/flights/1/status?status=BOARDING'
-curl -sX PUT 'http://localhost:8080/api/flights/1/status?status=DEPARTED'
+curl -X GET "http://localhost:8080/api/passengers/by-email?email=alexey.ivanov@email.com"
 ```
 
-### Отмена рейса с автоматической отменой бронирований
+## Сценарий 4: Создание рейсов (Flight)
+
+### Шаг 4.1: Создаем новый рейс
 
 ```bash
-curl -sX POST http://localhost:8080/api/flights/1/cancel
+curl -X POST http://localhost:8080/api/flights \
+  -H "Content-Type: application/json" \
+  -d '{
+  "flightNumber": "SU150",
+  "aircraftId": 1,
+  "departureAirportId": 1,
+  "arrivalAirportId": 2,
+  "departureTime": "2024-02-15T10:30:00+03:00",
+  "arrivalTime": "2024-02-15T12:45:00+03:00"
+}'
 ```
 
-### Просмотр бронирований
+### Шаг 4.2: Найдем рейсы между городами
 
 ```bash
-curl -s http://localhost:8080/api/bookings | jq
+curl -X GET "http://localhost:8080/api/flights/search?from=Saint Petersburg&to=Kazan&date=2025-11-10"
 ```
 
-### Удаление записей
+## Сценарий 5: Бронирование билетов (Booking)
+
+### Шаг 5.1: Создаем бронирование
 
 ```bash
-curl -sX DELETE http://localhost:8080/api/passengers/3
-curl -sX DELETE http://localhost:8080/api/aircrafts/2
-curl -sX DELETE http://localhost:8080/api/airports/3
+curl -X POST http://localhost:8080/api/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "passenger": {"id": 1},
+    "flight": {"id": 1},
+    "seatNumber": "12A",
+    "bookingClass": "ECONOMY"
+  }'
+```
+
+### Шаг 5.2: Смотрим бронирования пассажира
+
+```bash
+curl -X GET http://localhost:8080/api/bookings/passenger/1
+```
+
+## БИЗНЕС-ОПЕРАЦИИ
+
+### Операция 1: Расчет выручки рейса
+
+```bash
+curl -X GET http://localhost:8080/api/airline/flights/1/revenue
+```
+
+### Операция 2: Статистика загруженности рейса
+
+```bash
+curl -X GET http://localhost:8080/api/airline/flights/1/occupancy
+```
+
+### Операция 3: Популярные направления
+
+```bash
+curl -X GET http://localhost:8080/api/airline/popular-routes
+```
+
+### Операция 4: Частые пассажиры
+
+```bash
+curl -X GET http://localhost:8080/api/airline/frequent-passengers
+```
+
+### Операция 5: Рейсы на сегодня
+
+```bash
+curl -X GET http://localhost:8080/api/airline/todays-flights
 ```

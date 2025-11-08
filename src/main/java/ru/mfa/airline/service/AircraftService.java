@@ -1,50 +1,58 @@
 package ru.mfa.airline.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.mfa.airline.exception.NotFoundException;
 import ru.mfa.airline.model.Aircraft;
+import ru.mfa.airline.repository.AircraftRepository;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Сервис для работы с самолетами
+ */
 @Service
 public class AircraftService {
-    private final Map<Long, Aircraft> aircrafts = new ConcurrentHashMap<>();
-    private final AtomicLong seq = new AtomicLong(0);
+    @Autowired
+    private AircraftRepository aircraftRepository;
 
-    public List<Aircraft> findAll() { return new ArrayList<>(aircrafts.values()); }
+    public List<Aircraft> findAll() {
+        return aircraftRepository.findAll();
+    }
 
     public Aircraft findById(Long id) {
-        Aircraft aircraft = aircrafts.get(id);
-        if (aircraft == null) throw new NotFoundException("Aircraft not found: " + id);
-        return aircraft;
+        return aircraftRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Aircraft not found: " + id));
     }
 
     public Aircraft create(Aircraft aircraft) {
-        Long id = seq.incrementAndGet();
-        aircraft.setId(id);
         if (aircraft.getRegistrationNumber() == null || aircraft.getRegistrationNumber().isBlank()) {
             throw new IllegalArgumentException("registrationNumber is required");
         }
         if (aircraft.getCapacity() == null || aircraft.getCapacity() <= 0) {
             throw new IllegalArgumentException("capacity must be positive");
         }
-        aircrafts.put(id, aircraft);
-        return aircraft;
+        if (aircraftRepository.findByRegistrationNumber(aircraft.getRegistrationNumber()).isPresent()) {
+            throw new IllegalArgumentException(
+                    "Aircraft with registration number already exists: " + aircraft.getRegistrationNumber());
+        }
+
+        return aircraftRepository.save(aircraft);
     }
 
     public Aircraft update(Long id, Aircraft updated) {
-        if (!aircrafts.containsKey(id)) throw new NotFoundException("Aircraft not found: " + id);
+        findById(id);
+
         updated.setId(id);
-        aircrafts.put(id, updated);
-        return updated;
+        return aircraftRepository.save(updated);
     }
 
     public void delete(Long id) {
-        if (aircrafts.remove(id) == null) throw new NotFoundException("Aircraft not found: " + id);
+        findById(id);
+        aircraftRepository.deleteById(id);
+    }
+
+    public List<Aircraft> findAvailableAircrafts() {
+        return aircraftRepository.findByAvailableTrue();
     }
 }
-

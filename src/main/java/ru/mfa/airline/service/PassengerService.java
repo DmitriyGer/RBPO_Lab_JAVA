@@ -1,50 +1,54 @@
 package ru.mfa.airline.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.mfa.airline.exception.NotFoundException;
 import ru.mfa.airline.model.Passenger;
+import ru.mfa.airline.repository.PassengerRepository;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class PassengerService {
-    private final Map<Long, Passenger> passengers = new ConcurrentHashMap<>();
-    private final AtomicLong seq = new AtomicLong(0);
 
-    public List<Passenger> findAll() { return new ArrayList<>(passengers.values()); }
+    @Autowired
+    private PassengerRepository passengerRepository;
+
+    public List<Passenger> findAll() {
+        return passengerRepository.findAll();
+    }
 
     public Passenger findById(Long id) {
-        Passenger passenger = passengers.get(id);
-        if (passenger == null) throw new NotFoundException("Passenger not found: " + id);
-        return passenger;
+        return passengerRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Passenger not found: " + id));
     }
 
     public Passenger create(Passenger passenger) {
-        Long id = seq.incrementAndGet();
-        passenger.setId(id);
         if (passenger.getFirstName() == null || passenger.getFirstName().isBlank()) {
             throw new IllegalArgumentException("firstName is required");
         }
         if (passenger.getLastName() == null || passenger.getLastName().isBlank()) {
             throw new IllegalArgumentException("lastName is required");
         }
-        passengers.put(id, passenger);
-        return passenger;
+        if (passenger.getEmail() != null && passengerRepository.findByEmail(passenger.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Passenger with email already exists: " + passenger.getEmail());
+        }
+        if (passenger.getPassportNumber() != null
+                && passengerRepository.findByPassportNumber(passenger.getPassportNumber()).isPresent()) {
+            throw new IllegalArgumentException(
+                    "Passenger with passport number already exists: " + passenger.getPassportNumber());
+        }
+        return passengerRepository.save(passenger);
     }
 
     public Passenger update(Long id, Passenger updated) {
-        if (!passengers.containsKey(id)) throw new NotFoundException("Passenger not found: " + id);
+        findById(id);
         updated.setId(id);
-        passengers.put(id, updated);
-        return updated;
+        return passengerRepository.save(updated);
     }
 
     public void delete(Long id) {
-        if (passengers.remove(id) == null) throw new NotFoundException("Passenger not found: " + id);
+        findById(id);
+        passengerRepository.deleteById(id);
     }
 }
-
