@@ -9,7 +9,6 @@ import ru.mfa.airline.service.AirportService;
 import ru.mfa.airline.service.FlightService;
 import ru.mfa.airline.service.PassengerService;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Component

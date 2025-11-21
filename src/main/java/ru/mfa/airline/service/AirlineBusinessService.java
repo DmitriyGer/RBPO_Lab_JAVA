@@ -3,7 +3,6 @@ package ru.mfa.airline.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.mfa.airline.exception.NotFoundException;
 import ru.mfa.airline.model.*;
 import ru.mfa.airline.repository.BookingRepository;
 import ru.mfa.airline.repository.FlightRepository;
@@ -23,9 +22,6 @@ public class AirlineBusinessService {
 
     @Autowired
     private PassengerService passengerService;
-
-    @Autowired
-    private AircraftService aircraftService;
 
     @Autowired
     private FlightRepository flightRepository;
