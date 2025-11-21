@@ -37,6 +37,10 @@ public class UserService implements UserDetailsService {
             throw new IllegalArgumentException("Username already exists");
         }
 
+        if (!"ROLE_USER".equals(role) && !"ROLE_ADMIN".equals(role)) {
+            throw new IllegalArgumentException("Unknown role");
+        }
+
         User user = new User();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
