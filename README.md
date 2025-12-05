@@ -1,4 +1,4 @@
-# Лаба №4 – Базовая безопасность API
+# Лаба №5 – JWT Access/Refresh и роли (USER/ADMIN)
 
 ## Требования к паролю
 
@@ -7,85 +7,105 @@
 - Минимум одна цифра
 - Минимум один спецсимвол (!@#$%^&\* и т.д.)
 
-Все запросы также продублированы в Postman в [JSON файле](./Postman/Laba_4_Airline.postman_collection.json)
+## Запуск
 
-- Запуск проекта: `mvn spring-boot:run`
+```bash
+mvn spring-boot:run
+```
 
-## Регистрация и аутентификация
-
-### Регистрация нового пользователя (доступно без аутентификации)
+### 1) Регистрация пользователей (без JWT)
 
 Регистрация USER:
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST "http://localhost:8080/api/auth/register" \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "user1",
-    "password": "User123!@#",
-    "role": "USER"
-  }'
+  -d '{"username":"user1","password":"User123!@#","role":"USER"}'
 ```
 
 Регистрация ADMIN:
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST "http://localhost:8080/api/auth/register" \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin1",
-    "password": "Admin123!@#",
-    "role": "ADMIN"
-  }'
+  -d '{"username":"admin1","password":"Admin123!@#","role":"ADMIN"}'
 ```
 
-Пример слабого пароля (ошибка):
+Пример слабого пароля (ожидаем 400):
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST "http://localhost:8080/api/auth/register" \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "password": "123",
-    "role": "USER"
-  }'
+  -d '{"username":"testuser","password":"123","role":"USER"}'
 ```
 
-### Просмотр зарегистрированных пользователей (только ADMIN)
+### 2) Логин и получение JWT (USER и ADMIN)
+
+Логин USER:
 
 ```bash
-curl -X GET http://localhost:8080/api/users \
-  -u admin1:'Admin123!@#'
+TOKENS_USER=$(curl -s -X POST "http://localhost:8080/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"user1","password":"User123!@#"}')
+
+ACCESS_USER=$(echo "$TOKENS_USER" | jq -r '.accessToken')
+REFRESH_USER=$(echo "$TOKENS_USER" | jq -r '.refreshToken')
 ```
 
-Попытка просмотра USER (ошибка 403):
+Логин ADMIN:
 
 ```bash
-curl -X GET http://localhost:8080/api/users \
-  -u user1:'User123!@#'
+TOKENS_ADMIN=$(curl -s -X POST "http://localhost:8080/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin1","password":"Admin123!@#"}')
+
+ACCESS_ADMIN=$(echo "$TOKENS_ADMIN" | jq -r '.accessToken')
+REFRESH_ADMIN=$(echo "$TOKENS_ADMIN" | jq -r '.refreshToken')
 ```
 
-## Сценарий 1: Работа с самолетами (Aircraft)
+### 3) Обновление пары токенов (refresh)
 
-### Шаг 1.1: Посмотрим все самолеты (USER или ADMIN)
+Обновить токены USER:
 
 ```bash
-curl -X GET http://localhost:8080/api/aircrafts \
-  -u user1:'User123!@#'
+TOKENS_USER=$(curl -s -X POST "http://localhost:8080/api/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\":\"$REFRESH_USER\"}")
+
+ACCESS_USER=$(echo "$TOKENS_USER" | jq -r '.accessToken')
+REFRESH_USER=$(echo "$TOKENS_USER" | jq -r '.refreshToken')
 ```
 
-### Шаг 1.2: Посмотрим конкретный самолет (USER или ADMIN)
+### 4) Пользователи (ADMIN)
+
+Просмотр зарегистрированных пользователей:
 
 ```bash
-curl -X GET http://localhost:8080/api/aircrafts/1 \
-  -u user1:'User123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/users"
 ```
 
-### Шаг 1.3: Создадим новый самолет (только ADMIN)
+### 5) Самолёты (Aircrafts)
+
+Посмотрим все самолёты (USER):
 
 ```bash
-curl -X POST http://localhost:8080/api/aircrafts \
-  -u admin1:'Admin123!@#' \
+curl -H "Authorization: Bearer $ACCESS_USER" \
+  "http://localhost:8080/api/aircrafts"
+```
+
+Посмотрим конкретный самолёт (USER):
+
+```bash
+curl -H "Authorization: Bearer $ACCESS_USER" \
+  "http://localhost:8080/api/aircrafts/1"
+```
+
+Создадим новый самолёт (ADMIN):
+
+```bash
+curl -X POST "http://localhost:8080/api/aircrafts" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "Embraer E190",
@@ -96,26 +116,11 @@ curl -X POST http://localhost:8080/api/aircrafts \
   }'
 ```
 
-Попытка создания самолета USER (ошибка 403):
+Обновить самолёт (ADMIN):
 
 ```bash
-curl -X POST http://localhost:8080/api/aircrafts \
-  -u user1:User123!@# \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Airbus A320",
-    "manufacturer": "Airbus",
-    "registrationNumber": "VP-NEW02",
-    "capacity": 180,
-    "available": true
-  }'
-```
-
-### Шаг 1.4: Обновим самолет (только ADMIN)
-
-```bash
-curl -X PUT http://localhost:8080/api/aircrafts/1 \
-  -u admin1:'Admin123!@#' \
+curl -X PUT "http://localhost:8080/api/aircrafts/1" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "Boeing 737-800 MAX",
@@ -126,314 +131,294 @@ curl -X PUT http://localhost:8080/api/aircrafts/1 \
   }'
 ```
 
-### Шаг 1.5: Удалим самолет (только ADMIN)
+Удалить самолёт (ADMIN):
 
 ```bash
-curl -X DELETE http://localhost:8080/api/aircrafts/5 \
-  -u admin1:'Admin123!@#'
+curl -X DELETE "http://localhost:8080/api/aircrafts/5" \
+  -H "Authorization: Bearer $ACCESS_ADMIN"
 ```
 
-## Сценарий 2: Работа с аэропортами (Airport)
+### 6) Аэропорты (Airports)
 
-### Шаг 2.1: Смотрим все аэропорты (USER или ADMIN)
+Посмотреть все аэропорты (USER):
 
 ```bash
-curl -X GET http://localhost:8080/api/airports \
-  -u user1:'User123!@#'
+curl -H "Authorization: Bearer $ACCESS_USER" \
+  "http://localhost:8080/api/airports"
 ```
 
-### Шаг 2.2: Создаем новый аэропорт (только ADMIN)
+Создать новый аэропорт (ADMIN):
 
 ```bash
-curl -X POST http://localhost:8080/api/airports \
-  -u admin1:'Admin123!@#' \
+curl -X POST "http://localhost:8080/api/airports" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
-        "id": 2,
-        "code": "LED",
-        "name": "Pulkovo Airport",
-        "city": "Saint Petersburg",
-        "country": "Russia"
-    }'
-```
-
-### Шаг 2.3: Найдем аэропорты по городу (USER или ADMIN)
-
-```bash
-curl -X GET "http://localhost:8080/api/airports/by-city?city=Moscow" \
-  -u user1:'User123!@#'
-```
-
-### Шаг 2.4: Обновим аэропорт (только ADMIN)
-
-```bash
-curl -X PUT http://localhost:8080/api/airports/1 \
-  -u admin1:'Admin123!@#' \
-  -H "Content-Type: application/json" \
-  -d '{
-        "id": 1,
-        "code": "SVO",
-        "name": "Sheremetyevo International Airport",
-        "city": "Moscow",
-        "country": "Russia"
+    "code": "LED",
+    "name": "Пулково",
+    "city": "Санкт-Петербург",
+    "country": "Россия"
   }'
 ```
 
-### Шаг 2.5: Удалим аэропорт (только ADMIN)
+Найти аэропорты по городу (USER):
 
 ```bash
-curl -X DELETE http://localhost:8080/api/airports/5 \
-  -u admin1:'Admin123!@#'
+curl -G -H "Authorization: Bearer $ACCESS_USER" \
+  --data-urlencode "city=Moscow" \
+  "http://localhost:8080/api/airports/by-city"
 ```
 
-## Сценарий 3: Управление пассажирами (Passenger)
-
-### Шаг 3.1: Регистрируем нового пассажира (только ADMIN)
+Обновить аэропорт (ADMIN):
 
 ```bash
-curl -X POST http://localhost:8080/api/passengers \
-  -u admin1:'Admin123!@#' \
+curl -X PUT "http://localhost:8080/api/airports/1" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
-  "firstName": "Иван",
-  "lastName": "Петров",
-  "email": "ivan.petrov@email.com",
-  "phoneNumber": "+7-900-222-3344",
-  "passportNumber": "1234567891"
-}'
+    "id": 1,
+    "code": "SVO",
+    "name": "Sheremetyevo International Airport",
+    "city": "Moscow",
+    "country": "Russia"
+  }'
 ```
 
-### Шаг 3.2: Посмотрим всех пассажиров (только ADMIN)
+Удалить аэропорт (ADMIN):
 
 ```bash
-curl -X GET http://localhost:8080/api/passengers \
-  -u admin1:'Admin123!@#'
+curl -X DELETE "http://localhost:8080/api/airports/4" \
+  -H "Authorization: Bearer $ACCESS_ADMIN"
 ```
 
-Попытка просмотра USER (ошибка 403):
+### 7) Пассажиры (Passengers) — только ADMIN
+
+Зарегистрировать нового пассажира:
 
 ```bash
-curl -X GET http://localhost:8080/api/passengers \
-  -u user1:'User123!@#'
-```
-
-### Шаг 3.3: Обновим пассажира (только ADMIN)
-
-```bash
-curl -X PUT http://localhost:8080/api/passengers/1 \
-  -u admin1:'Admin123!@#' \
+curl -X POST "http://localhost:8080/api/passengers" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
-  "firstName": "Иван",
-  "lastName": "Иванов",
-  "email": "ivan.ivanov@email.com",
-  "phoneNumber": "+7-900-111-2233",
-  "passportNumber": "1234567890"
-}'
+    "firstName": "test",
+    "lastName": "tests",
+    "email": "test.tests@email.com",
+    "phoneNumber": "+7-900-222-2244",
+    "passportNumber": "1234567878"
+  }'
 ```
 
-### Шаг 3.4: Удалим пассажира (только ADMIN)
+Посмотреть всех пассажиров:
 
 ```bash
-curl -X DELETE http://localhost:8080/api/passengers/5 \
-  -u admin1:'Admin123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/passengers"
 ```
 
-## Сценарий 4: Создание рейсов (Flight)
-
-### Шаг 4.1: Создаем новый рейс (только ADMIN)
+Обновить пассажира:
 
 ```bash
-curl -X POST http://localhost:8080/api/flights \
-  -u admin1:'Admin123!@#' \
+curl -X PUT "http://localhost:8080/api/passengers/4" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
-  "flightNumber": "SU150",
-  "aircraftId": 1,
-  "departureAirportId": 1,
-  "arrivalAirportId": 2,
-  "departureTime": "2024-02-15T10:30:00+03:00",
-  "arrivalTime": "2024-02-15T12:45:00+03:00"
-}'
+    "firstName": "Иван",
+    "lastName": "Герасимов",
+    "email": "dmitriy.gerasimov@email.com",
+    "passportNumber": "1111234567",
+    "phoneNumber": "+7-999-222-3344"
+  }'
 ```
 
-### Шаг 4.2: Найдем рейсы между городами (USER или ADMIN)
+Удалить пассажира:
 
 ```bash
-curl -X GET "http://localhost:8080/api/flights/search?from=Saint Petersburg&to=Kazan&date=2025-11-10" \
-  -u user1:'User123!@#'
+curl -X DELETE "http://localhost:8080/api/passengers/5" \
+  -H "Authorization: Bearer $ACCESS_ADMIN"
 ```
 
-### Шаг 4.3: Посмотрим все рейсы (USER или ADMIN)
+### 8) Рейсы (Flights)
+
+Создать новый рейс (ADMIN):
 
 ```bash
-curl -X GET http://localhost:8080/api/flights \
-  -u user1:'User123!@#'
-```
-
-### Шаг 4.4: Обновим рейс (только ADMIN)
-
-```bash
-curl -X PUT http://localhost:8080/api/flights/1 \
-  -u admin1:'Admin123!@#' \
+curl -X POST "http://localhost:8080/api/flights" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
-  "flightNumber": "SU151",
-  "aircraft": {"id": 1},
-  "departureAirport": {"id": 1},
-  "arrivalAirport": {"id": 2},
-  "departureTime": "2024-02-15T11:30:00+03:00",
-  "arrivalTime": "2024-02-15T13:45:00+03:00",
-  "status": "SCHEDULED"
-}'
+    "flightNumber": "SU150",
+    "aircraftId": 1,
+    "departureAirportId": 1,
+    "arrivalAirportId": 2,
+    "departureTime": "2024-02-15T10:30:00+03:00",
+    "arrivalTime": "2024-02-15T12:45:00+03:00"
+  }'
 ```
 
-### Шаг 4.5: Изменим статус рейса (только ADMIN)
+Найти рейсы между городами (USER):
 
 ```bash
-curl -X PUT "http://localhost:8080/api/flights/1/status?status=BOARDING" \
-  -u admin1:'Admin123!@#'
+curl -G -H "Authorization: Bearer $ACCESS_USER" \
+  --data-urlencode "from=Saint Petersburg" \
+  --data-urlencode "to=Kazan" \
+  --data-urlencode "date=2025-11-10" \
+  "http://localhost:8080/api/flights/search"
 ```
 
-### Шаг 4.6: Отменим рейс (только ADMIN)
+Посмотреть все рейсы (USER):
 
 ```bash
-curl -X POST http://localhost:8080/api/flights/1/cancel \
-  -u admin1:'Admin123!@#'
+curl -H "Authorization: Bearer $ACCESS_USER" \
+  "http://localhost:8080/api/flights"
 ```
 
-### Шаг 4.7: Удалим рейс (только ADMIN)
+Обновить рейс (ADMIN):
 
 ```bash
-curl -X DELETE http://localhost:8080/api/flights/5 \
-  -u admin1:'Admin123!@#'
+curl -X PUT "http://localhost:8080/api/flights/1" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "flightNumber": "SU151",
+    "aircraft": {"id": 1},
+    "departureAirport": {"id": 1},
+    "arrivalAirport": {"id": 2},
+    "departureTime": "2024-02-15T11:30:00+03:00",
+    "arrivalTime": "2024-02-15T13:45:00+03:00",
+    "status": "SCHEDULED"
+  }'
 ```
 
-## Сценарий 5: Бронирование билетов (Booking)
-
-### Шаг 5.1: Создаем бронирование (USER или ADMIN)
+Изменить статус рейса (ADMIN):
 
 ```bash
-curl -X POST http://localhost:8080/api/bookings \
-  -u user1:'User123!@#' \
+curl -X PUT -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/flights/1/status?status=BOARDING"
+```
+
+Отменить рейс (ADMIN):
+
+```bash
+curl -X POST -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/flights/1/cancel"
+```
+
+Удалить рейс (ADMIN):
+
+```bash
+curl -X DELETE -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/flights/5"
+```
+
+### 9) Бронирования (Bookings)
+
+Создать бронирование (USER):
+
+```bash
+curl -X POST "http://localhost:8080/api/bookings" \
+  -H "Authorization: Bearer $ACCESS_USER" \
   -H "Content-Type: application/json" \
   -d '{
     "passengerId": 1,
     "flightId": 1,
     "seatNumber": "12A",
-    "price": 5000.00
+    "price": 5000.0
   }'
 ```
 
-### Шаг 5.2: Смотрим бронирования пассажира (USER или ADMIN)
+Смотрим бронирования пассажира (USER):
 
 ```bash
-curl -X GET http://localhost:8080/api/bookings/passenger/1 \
-  -u user1:'User123!@#'
+curl -H "Authorization: Bearer $ACCESS_USER" \
+  "http://localhost:8080/api/bookings/passenger/1"
 ```
 
-### Шаг 5.3: Смотрим все бронирования (только ADMIN)
+Смотрим все бронирования (ADMIN):
 
 ```bash
-curl -X GET http://localhost:8080/api/bookings \
-  -u admin1:'Admin123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/bookings"
 ```
 
-Попытка просмотра всех бронирований USER (ошибка 403):
+Отменить бронирование (USER):
 
 ```bash
-curl -X GET http://localhost:8080/api/bookings \
-  -u user1:'User123!@#'
+curl -X PUT -H "Authorization: Bearer $ACCESS_USER" \
+  "http://localhost:8080/api/bookings/1/cancel"
 ```
 
-### Шаг 5.4: Отменим бронирование (USER или ADMIN)
+Удалить бронирование (ADMIN):
 
 ```bash
-curl -X PUT http://localhost:8080/api/bookings/1/cancel \
-  -u user1:'User123!@#'
+curl -X DELETE -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/bookings/1"
 ```
 
-### Шаг 5.5: Удалим бронирование (только ADMIN)
+### 10) Бизнес-операции авиакомпании (Airline) — только ADMIN
+
+Расчёт выручки рейса:
 
 ```bash
-curl -X DELETE http://localhost:8080/api/bookings/1 \
-  -u admin1:'Admin123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/airline/flights/1/revenue"
 ```
 
-## БИЗНЕС-ОПЕРАЦИИ (только ADMIN)
-
-### Операция 1: Расчет выручки рейса
+Статистика загруженности рейса:
 
 ```bash
-curl -X GET http://localhost:8080/api/airline/flights/1/revenue \
-  -u admin1:'Admin123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/airline/flights/1/occupancy"
 ```
 
-Попытка USER (ошибка 403):
+Популярные направления:
 
 ```bash
-curl -X GET http://localhost:8080/api/airline/flights/1/revenue \
-  -u user1:'User123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/airline/popular-routes"
 ```
 
-### Операция 2: Статистика загруженности рейса
+Частые пассажиры:
 
 ```bash
-curl -X GET http://localhost:8080/api/airline/flights/1/occupancy \
-  -u admin1:'Admin123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/airline/frequent-passengers"
 ```
 
-### Операция 3: Популярные направления
+Рейсы на сегодня:
 
 ```bash
-curl -X GET http://localhost:8080/api/airline/popular-routes \
-  -u admin1:'Admin123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/airline/todays-flights"
 ```
 
-### Операция 4: Частые пассажиры
+Резервирование места:
 
 ```bash
-curl -X GET http://localhost:8080/api/airline/frequent-passengers \
-  -u admin1:'Admin123!@#'
-```
-
-### Операция 5: Рейсы на сегодня
-
-```bash
-curl -X GET http://localhost:8080/api/airline/todays-flights \
-  -u admin1:'Admin123!@#'
-```
-
-### Операция 6: Резервирование места
-
-```bash
-curl -X POST http://localhost:8080/api/airline/reservation \
-  -u admin1:'Admin123!@#' \
+curl -X POST "http://localhost:8080/api/airline/reservation" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
     "flightId": 1,
     "passengerId": 1,
     "seatNumber": "15B",
-    "price": 7500.00
+    "price": 7500.0
   }'
 ```
 
-### Операция 7: Отмена рейса с причиной
+Отмена рейса с причиной:
 
 ```bash
-curl -X POST http://localhost:8080/api/airline/flights/1/cancel \
-  -u admin1:'Admin123!@#' \
+curl -X POST "http://localhost:8080/api/airline/flights/1/cancel" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
-  -d '{
-    "reason": "Плохие погодные условия"
-  }'
+  -d '{"reason":"Плохие погодные условия"}'
 ```
 
-### Операция 8: Задержка рейса
+Задержка рейса:
 
 ```bash
-curl -X POST http://localhost:8080/api/airline/flights/1/delay \
-  -u admin1:'Admin123!@#' \
+curl -X POST "http://localhost:8080/api/airline/flights/1/delay" \
+  -H "Authorization: Bearer $ACCESS_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
     "newDepartureTime": "2024-02-15T14:30:00+03:00",
@@ -441,33 +426,33 @@ curl -X POST http://localhost:8080/api/airline/flights/1/delay \
   }'
 ```
 
-### Операция 9: Регистрация на рейс
+Регистрация на рейс:
 
 ```bash
-curl -X POST http://localhost:8080/api/airline/flights/1/check-in \
-  -u admin1:'Admin123!@#'
+curl -X POST -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/airline/flights/1/check-in"
 ```
 
-### Операция 10: Отправление рейса
+Отправление рейса:
 
 ```bash
-curl -X POST http://localhost:8080/api/airline/flights/1/depart \
-  -u admin1:'Admin123!@#'
+curl -X POST -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/airline/flights/1/depart"
 ```
 
-### Операция 11: Список пассажиров рейса
+Список пассажиров рейса:
 
 ```bash
-curl -X GET http://localhost:8080/api/airline/flights/1/passengers \
-  -u admin1:'Admin123!@#'
+curl -H "Authorization: Bearer $ACCESS_ADMIN" \
+  "http://localhost:8080/api/airline/flights/1/passengers"
 ```
 
-## Тестирование без аутентификации (ошибка 401)
+## Тестирование без аутентификации (ожидаем 401)
 
 ```bash
-curl -X GET http://localhost:8080/api/aircrafts
+curl -X GET "http://localhost:8080/api/aircrafts"
 ```
 
 ```bash
-curl -X GET http://localhost:8080/api/flights
+curl -X GET "http://localhost:8080/api/flights"
 ```
