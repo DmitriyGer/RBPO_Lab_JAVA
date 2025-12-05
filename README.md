@@ -63,6 +63,47 @@ ACCESS_ADMIN=$(echo "$TOKENS_ADMIN" | jq -r '.accessToken')
 REFRESH_ADMIN=$(echo "$TOKENS_ADMIN" | jq -r '.refreshToken')
 ```
 
+### Быстрый сценарий проверки refresh-сессий
+
+1. Сохраните текущий refresh пользователя перед обновлением:
+
+```bash
+OLD_REFRESH_USER="$REFRESH_USER"
+```
+
+2. Обновите пару токенов (возвращает новую сессию и новый refresh):
+
+```bash
+TOKENS_USER=$(curl -s -X POST "http://localhost:8080/api/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\":\"$REFRESH_USER\"}")
+
+ACCESS_USER=$(echo "$TOKENS_USER" | jq -r '.accessToken')
+REFRESH_USER=$(echo "$TOKENS_USER" | jq -r '.refreshToken')
+SESSION_ID_NEW=$(echo "$TOKENS_USER" | jq -r '.sessionId')
+```
+
+3. Попробуйте повторно обновить по старому refresh (ожидаем 401/403):
+
+```bash
+curl -i -X POST "http://localhost:8080/api/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\":\"$OLD_REFRESH_USER\"}"
+```
+
+4. Проверка статусов сессий в БД (пример через psql):
+
+```bash
+psql "postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@localhost:${POSTGRES_PORT:-50000}/${POSTGRES_DB:-admin_bd}" \
+  -c "select id, user_id, status, expires_at, revoked_at from user_sessions order by id desc limit 5;"
+```
+
+5. Запрос к защищенному ресурсу с новым access:
+
+```bash
+curl -H "Authorization: Bearer $ACCESS_USER" "http://localhost:8080/api/flights"
+```
+
 ### 3) Обновление пары токенов (refresh)
 
 Обновить токены USER:
