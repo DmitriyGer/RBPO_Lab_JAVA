@@ -97,6 +97,21 @@
     {
       "name": "Регистрация ADMIN",
       "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "Admin123!@#",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin1",
+              "type": "string"
+            }
+          ]
+        },
         "method": "POST",
         "header": [
           {
@@ -107,7 +122,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"username\": \"admin1\",\n    \"password\": \"Admin123!@#\",\n    \"role\": \"ADMIN\"\n}",
+          "raw": "{\n    \"username\": \"admin2\",\n    \"password\": \"Admin123!@#\",\n    \"role\": \"ADMIN\"\n}",
           "options": {
             "raw": {
               "language": "json"

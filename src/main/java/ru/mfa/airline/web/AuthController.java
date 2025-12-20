@@ -3,6 +3,8 @@ package ru.mfa.airline.web;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 import ru.mfa.airline.dto.RegisterRequest;
@@ -22,12 +24,20 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request, Authentication authentication) {
         try {
             validateUsername(request.getUsername());
             validatePassword(request.getPassword());
 
             String role = normalizeRole(request.getRole());
+
+            // Проверка: только ADMIN может создавать других ADMIN'ов
+            if (role.equals("ROLE_ADMIN")) {
+                if (authentication == null || !hasRole(authentication, "ROLE_ADMIN")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "Only administrators can create admin accounts"));
+                }
+            }
 
             User user = userService.createUser(request.getUsername(), request.getPassword(), role);
 
@@ -45,6 +55,12 @@ public class AuthController {
     @GetMapping("/csrf")
     public Map<String, String> csrfToken(CsrfToken token) {
         return Map.of("token", token.getToken());
+    }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals(role));
     }
 
     private void validatePassword(String password) {
