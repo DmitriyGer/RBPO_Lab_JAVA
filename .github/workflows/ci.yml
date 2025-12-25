@@ -44,23 +44,28 @@ jobs:
           mkdir -p .ci-secrets
           echo "${{ secrets.KEYSTORE_P12_B64 }}" | base64 --decode > .ci-secrets/keystore.p12
           chmod 600 .ci-secrets/keystore.p12
-          echo "Keystore restored: $(ls -la .ci-secrets/keystore.p12)"
+          keytool -list -storetype PKCS12 -keystore .ci-secrets/keystore.p12 -storepass "${{ secrets.KEYSTORE_PASSWORD }}" | head -n 20
 
       - name: Compile
         run: mvn -q -DskipTests compile
 
       - name: Test
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
-
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
+          # DB (ВАЖНО: host = postgres)
+          SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/app
           SPRING_DATASOURCE_USERNAME: app
           SPRING_DATASOURCE_PASSWORD: app
+          SPRING_PROFILES_ACTIVE: test
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
         run: mvn -q test
 
       - name: Package (jar)
         env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/app
+          SPRING_DATASOURCE_USERNAME: app
+          SPRING_DATASOURCE_PASSWORD: app
+
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
         run: mvn -q -DskipTests package
