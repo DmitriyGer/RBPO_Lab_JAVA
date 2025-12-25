@@ -1,3 +1,4 @@
+
 package ru.mfa.airline.config;
 
 import io.jsonwebtoken.JwtException;
