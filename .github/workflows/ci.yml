@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  build_test_package:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: app
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Restore keystore from GitHub Secret (base64)
+        shell: bash
+        run: |
+          mkdir -p .ci-secrets
+          echo "${{ secrets.KEYSTORE_P12_B64 }}" | base64 --decode > .ci-secrets/keystore.p12
+          chmod 600 .ci-secrets/keystore.p12
+          echo "Keystore restored: $(ls -la .ci-secrets/keystore.p12)"
+
+      - name: Compile
+        run: mvn -q -DskipTests compile
+
+      - name: Test
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
+
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
+          SPRING_DATASOURCE_USERNAME: app
+          SPRING_DATASOURCE_PASSWORD: app
+        run: mvn -q test
+
+      - name: Package (jar)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
+        run: mvn -q -DskipTests package
+
+      - name: Upload artifact (jar)
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-demo-${{ github.ref_name }}-${{ github.sha }}
+          path: target/*.jar

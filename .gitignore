@@ -36,3 +36,8 @@ build/
 
 ### Mac OS ###
 .DS_Store
+# TLS secrets
+src/main/resources/certs/*.p12
+*.p12
+*.key
+secrets/*
