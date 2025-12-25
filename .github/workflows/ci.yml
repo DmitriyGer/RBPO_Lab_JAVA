@@ -25,7 +25,7 @@ jobs:
           --health-cmd "pg_isready -U app -d app"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 20
 
     steps:
       - name: Checkout
@@ -43,41 +43,64 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .ci-secrets
+
+          # ВАЖНО: printf, а не echo — чтобы не ломать base64 переносами/escape-ами
           printf '%s' "${{ secrets.KEYSTORE_P12_B64 }}" | base64 -d > .ci-secrets/keystore.p12
           chmod 600 .ci-secrets/keystore.p12
-          ls -la .ci-secrets/keystore.p12
 
-      - name: Validate keystore
+          ls -la .ci-secrets/keystore.p12
+          file .ci-secrets/keystore.p12 || true
+
+      - name: Verify keystore (alias must exist)
         shell: bash
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
           keytool -list -v -storetype PKCS12 \
-            -keystore .ci-secrets/keystore.p12 \
-            -storepass "$KEYSTORE_PASSWORD" | egrep -n "Alias name|Entry type|Certificate chain length"
+            -keystore ".ci-secrets/keystore.p12" \
+            -storepass "${KEYSTORE_PASSWORD}" \
+          | egrep -n "Alias name|Entry type|Certificate chain length" || true
+
+      - name: Wait for Postgres to accept connections
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U app -d app >/dev/null 2>&1; then
+              echo "Postgres is ready"
+              exit 0
+            fi
+            echo "Waiting for Postgres... ($i/30)"
+            sleep 2
+          done
+          echo "Postgres did not become ready in time"
+          exit 1
 
       - name: Compile
         run: mvn -q -DskipTests compile
 
       - name: Test
         env:
+          # TLS для Spring
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
 
+          # На всякий случай дублируем и SPRING_ и POSTGRES_
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
           SPRING_DATASOURCE_USERNAME: app
           SPRING_DATASOURCE_PASSWORD: app
+
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: "app"
+          POSTGRES_USER: "app"
+          POSTGRES_PASSWORD: "app"
         run: mvn -q test
 
       - name: Package (jar)
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
-
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
-          SPRING_DATASOURCE_USERNAME: app
-          SPRING_DATASOURCE_PASSWORD: app
         run: mvn -q -DskipTests package
 
       - name: Upload artifact (jar)
@@ -85,4 +108,3 @@ jobs:
         with:
           name: maven-demo-${{ github.ref_name }}-${{ github.sha }}
           path: target/*.jar
-          if-no-files-found: error
