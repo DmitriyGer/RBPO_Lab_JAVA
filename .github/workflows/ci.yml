@@ -41,33 +41,43 @@ jobs:
       - name: Restore keystore from GitHub Secret (base64)
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p .ci-secrets
-          echo "${{ secrets.KEYSTORE_P12_B64 }}" | base64 --decode > .ci-secrets/keystore.p12
+          printf '%s' "${{ secrets.KEYSTORE_P12_B64 }}" | base64 -d > .ci-secrets/keystore.p12
           chmod 600 .ci-secrets/keystore.p12
-          keytool -list -storetype PKCS12 -keystore .ci-secrets/keystore.p12 -storepass "${{ secrets.KEYSTORE_PASSWORD }}" | head -n 20
+          ls -la .ci-secrets/keystore.p12
+
+      - name: Validate keystore
+        shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          keytool -list -v -storetype PKCS12 \
+            -keystore .ci-secrets/keystore.p12 \
+            -storepass "$KEYSTORE_PASSWORD" | egrep -n "Alias name|Entry type|Certificate chain length"
 
       - name: Compile
         run: mvn -q -DskipTests compile
 
       - name: Test
         env:
-          # DB (ВАЖНО: host = postgres)
-          SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/app
-          SPRING_DATASOURCE_USERNAME: app
-          SPRING_DATASOURCE_PASSWORD: app
-          SPRING_PROFILES_ACTIVE: test
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
+
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
+          SPRING_DATASOURCE_USERNAME: app
+          SPRING_DATASOURCE_PASSWORD: app
         run: mvn -q test
 
       - name: Package (jar)
         env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/app
-          SPRING_DATASOURCE_USERNAME: app
-          SPRING_DATASOURCE_PASSWORD: app
-
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_PATH: ${{ github.workspace }}/.ci-secrets/keystore.p12
+
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
+          SPRING_DATASOURCE_USERNAME: app
+          SPRING_DATASOURCE_PASSWORD: app
         run: mvn -q -DskipTests package
 
       - name: Upload artifact (jar)
@@ -75,3 +85,4 @@ jobs:
         with:
           name: maven-demo-${{ github.ref_name }}-${{ github.sha }}
           path: target/*.jar
+          if-no-files-found: error
