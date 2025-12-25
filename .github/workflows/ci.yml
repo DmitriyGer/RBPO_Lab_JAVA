@@ -54,25 +54,39 @@ jobs:
           echo "Postgres did not become ready in time"
           exit 1
 
-      # Восстанавливаем keystore ТОЛЬКО если секрет реально доступен (обычно это push/workflow_dispatch)
       - name: Restore keystore from GitHub Secret (base64) if available
-        if: ${{ secrets.KEYSTORE_P12_B64 != '' }}
         shell: bash
+        env:
+          KEYSTORE_P12_B64: ${{ secrets.KEYSTORE_P12_B64 }}
         run: |
           set -euo pipefail
           mkdir -p .ci-secrets
-          printf '%s' "${{ secrets.KEYSTORE_P12_B64 }}" | base64 -d > .ci-secrets/keystore.p12
+
+          if [ -z "${KEYSTORE_P12_B64:-}" ]; then
+            echo "KEYSTORE_P12_B64 is empty/unavailable in this run (likely PR from fork). Skipping keystore restore."
+            exit 0
+          fi
+
+          printf '%s' "$KEYSTORE_P12_B64" | base64 -d > .ci-secrets/keystore.p12
           chmod 600 .ci-secrets/keystore.p12
           ls -la .ci-secrets/keystore.p12
           file .ci-secrets/keystore.p12 || true
 
       - name: Verify keystore (optional)
-        if: ${{ secrets.KEYSTORE_P12_B64 != '' }}
         shell: bash
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
+          if [ ! -f ".ci-secrets/keystore.p12" ]; then
+            echo "Keystore file not present -> skip verify"
+            exit 0
+          fi
+          if [ -z "${KEYSTORE_PASSWORD:-}" ]; then
+            echo "KEYSTORE_PASSWORD not available -> skip verify"
+            exit 0
+          fi
+
           keytool -list -v -storetype PKCS12 \
             -keystore ".ci-secrets/keystore.p12" \
             -storepass "${KEYSTORE_PASSWORD}" \
@@ -86,8 +100,7 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
           SPRING_DATASOURCE_USERNAME: app
           SPRING_DATASOURCE_PASSWORD: app
-        run: |
-          mvn -q -Dserver.ssl.enabled=false test
+        run: mvn -q -Dserver.ssl.enabled=false test
 
       - name: Package (jar)
         run: mvn -q -DskipTests package
